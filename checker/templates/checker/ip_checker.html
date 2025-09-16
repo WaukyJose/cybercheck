@@ -1,0 +1,284 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>IP & Privacy Checker</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-light">
+    <!-- Header -->
+    <div class="container-fluid py-3 px-4" style="background-color: #d6e5d1">
+      <div class="row align-items-center">
+        <!-- Left Image -->
+        <div class="col-auto">
+          <img
+            src="{% static 'checker/images/Espe-Latacunga.jpg' %}"
+            alt="ESPE Latacunga"
+            height="60"
+          />
+        </div>
+        <!-- Center Text -->
+        <div class="col text-center">
+          <h4 class="mb-0 fw-bold text-dark">
+            CIBERSEGURIDAD EN SISTEMAS DE TELECOMUNICACIONES (2025)
+          </h4>
+          <small class="text-muted">
+            Curso impartido por Ing. Diego Pinto ·
+            <a href="https://espe-innovativa.edu.ec/" target="_blank"
+              >ESPE Innovativa</a
+            >
+          </small>
+        </div>
+        <!-- Right Image -->
+        <div class="col-auto">
+          <img
+            src="{% static 'checker/images/download.jpeg' %}"
+            alt="ESPE Innovativa Logo"
+            height="60"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="container my-4">
+      <h1 class="text-primary">IP & Privacy Checker</h1>
+      <p class="text-muted">
+        This page shows what websites can detect about your device, IP address,
+        and connection.
+      </p>
+
+      <button id="runAudit" class="btn btn-danger mb-3">
+        🔍 Run Full Privacy Audit
+      </button>
+      <div id="auditSummary" class="alert alert-dark d-none"></div>
+
+      <!-- IP Info -->
+      <div class="card mb-3">
+        <div class="card-header bg-info text-white">IP Information</div>
+        <div class="card-body">
+          <h5>Your IP Address: <code>{{ ip_address }}</code></h5>
+          <ul>
+            {% if ip_info.city %}
+            <li><strong>City:</strong> {{ ip_info.city }}</li>
+            {% endif %} {% if ip_info.region %}
+            <li><strong>Region:</strong> {{ ip_info.region }}</li>
+            {% endif %} {% if ip_info.country_name %}
+            <li><strong>Country:</strong> {{ ip_info.country_name }}</li>
+            {% endif %} {% if ip_info.org %}
+            <li><strong>ISP:</strong> {{ ip_info.org }}</li>
+            {% endif %} {% if ip_info.error %}
+            <li><strong>Error:</strong> {{ ip_info.error }}</li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- IPQS -->
+      <div class="card mb-3">
+        <div class="card-header bg-warning text-dark">
+          <button
+            class="btn btn-sm btn-outline-dark"
+            data-bs-toggle="collapse"
+            data-bs-target="#ipqs"
+          >
+            Toggle Risk Analysis (IPQS)
+          </button>
+        </div>
+        <div id="ipqs" class="collapse show card-body">
+          <p>
+            This risk score is based on IPQualityScore's threat intelligence.
+          </p>
+          <ul>
+            {% if ipqs_data.fraud_score is not none %}
+            <li>
+              <strong>Fraud Score:</strong> {{ ipqs_data.fraud_score }} / 100
+            </li>
+            {% endif %} {% if ipqs_data.is_proxy %}
+            <li><strong>Proxy/VPN:</strong> {{ ipqs_data.is_proxy }}</li>
+            {% endif %} {% if ipqs_data.is_tor %}
+            <li><strong>Tor Node:</strong> {{ ipqs_data.is_tor }}</li>
+            {% endif %} {% if ipqs_data.is_crawler %}
+            <li><strong>Crawler:</strong> {{ ipqs_data.is_crawler }}</li>
+            {% endif %} {% if ipqs_data.is_datacenter %}
+            <li><strong>Data Center:</strong> {{ ipqs_data.is_datacenter }}</li>
+            {% endif %} {% if ipqs_data.organization %}
+            <li><strong>Org:</strong> {{ ipqs_data.organization }}</li>
+            {% endif %} {% if ipqs_data.error %}
+            <li><strong>Error:</strong> {{ ipqs_data.error }}</li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Browser Fingerprint -->
+      <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+          Browser Fingerprint
+        </div>
+        <div class="card-body">
+          <ul>
+            <li><strong>User Agent:</strong> {{ user_agent }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- DNS Leak -->
+      <div class="card mb-3">
+        <div class="card-header bg-success text-white">DNS Leak Test</div>
+        <div class="card-body">
+          <p>
+            Checking if your system is leaking DNS requests outside your VPN or
+            encrypted connection.
+          </p>
+          <ul id="dns-results">
+            <li>Testing...</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Packet Capture (Local Interface) -->
+      <div class="card mt-3">
+        <div class="card-header bg-dark text-white">
+          Packet Capture (Local Interface)
+        </div>
+        <div class="card-body">
+          <button onclick="startCapture()" class="btn btn-primary">
+            🧪 Wireshark Capture Packets
+          </button>
+          <ul id="packetList" class="mt-3"></ul>
+          <ul>
+            {% for item in packets %}
+            <li>
+              <strong>{{ item.packet }}</strong><br />
+              <small>{{ item.explanation }}</small>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <script>
+        function startCapture() {
+          fetch("/capture/")
+            .then((response) => response.json())
+            .then((data) => {
+              const list = document.getElementById("packetList");
+              list.innerHTML = "";
+              data.packets.forEach((pkt) => {
+                const li = document.createElement("li");
+                li.innerHTML = `<strong>${pkt.packet}</strong><br><small>${pkt.explanation}</small>`;
+                list.appendChild(li);
+              });
+            })
+            .catch((error) => {
+              alert("Error capturing packets: " + error);
+            });
+        }
+      </script>
+
+      <!-- WebRTC Leak -->
+      <div class="card mb-3">
+        <div class="card-header bg-danger text-white">WebRTC Leak Test</div>
+        <div class="card-body">
+          <p>
+            Checking for WebRTC = Web Real-Time Communicationleaks which may
+            expose your true IP behind a VPN or proxy.
+          </p>
+          <ul id="webrtc-results">
+            <li>Testing...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function runCapture() {
+        fetch("/capture/")
+          .then((res) => res.json())
+          .then((data) => {
+            const list = document.getElementById("packetList");
+            list.innerHTML = "";
+            data.packets.forEach((p) => {
+              const li = document.createElement("li");
+              li.className = "list-group-item";
+              li.textContent = p;
+              list.appendChild(li);
+            });
+          });
+      }
+
+      const ipSet = new Set();
+      let dnsLeak = false;
+      let webrtcLeak = false;
+
+      function runDNSLeakTest() {
+        return fetch("https://dnsleaktest.jameshfisher.com/json")
+          .then((res) => res.json())
+          .then((data) => {
+            const ul = document.getElementById("dns-results");
+            ul.innerHTML = `<li><strong>DNS Server:</strong> ${data.dns_ip}</li>
+                      <li><strong>Leak Detected:</strong> <span style="color:red;">YES</span></li>`;
+            dnsLeak = true;
+          })
+          .catch(() => {
+            document.getElementById("dns-results").innerHTML =
+              "<li>Could not detect DNS leak</li>";
+          });
+      }
+
+      function runWebRTCLeakTest() {
+        return new Promise((resolve) => {
+          const ul = document.getElementById("webrtc-results");
+          ul.innerHTML = "";
+          const pc = new RTCPeerConnection({ iceServers: [] });
+          pc.createDataChannel("");
+          pc.createOffer().then((offer) => pc.setLocalDescription(offer));
+          pc.onicecandidate = (event) => {
+            if (event && event.candidate) {
+              const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
+              const ipMatch = ipRegex.exec(event.candidate.candidate);
+              if (ipMatch) {
+                ipSet.add(ipMatch[1]);
+                ipSet.forEach((ip) => {
+                  ul.innerHTML += `<li>Leaked IP: ${ip}</li>`;
+                });
+                ul.innerHTML += `<li><strong>Leak Detected:</strong> <span style="color:red;">YES</span></li>`;
+                webrtcLeak = true;
+                resolve();
+              }
+            }
+          };
+          setTimeout(() => resolve(), 3000);
+        });
+      }
+
+      document
+        .getElementById("runAudit")
+        .addEventListener("click", async () => {
+          dnsLeak = false;
+          webrtcLeak = false;
+          ipSet.clear();
+          document.getElementById("auditSummary").classList.add("d-none");
+
+          await Promise.all([runDNSLeakTest(), runWebRTCLeakTest()]);
+
+          const summary = [];
+          if (dnsLeak) summary.push("🚨 DNS Leak Detected");
+          if (webrtcLeak) summary.push("🚨 WebRTC Leak Detected");
+          if (!dnsLeak && !webrtcLeak) summary.push("✅ No Leaks Detected");
+
+          const summaryBox = document.getElementById("auditSummary");
+          summaryBox.classList.remove("d-none");
+          summaryBox.innerHTML = `<strong>Audit Summary:</strong><br>${summary.join(
+            "<br>"
+          )}`;
+        });
+    </script>
+  </body>
+</html>
