@@ -12,7 +12,7 @@ Developed for the **Ciberseguridad en Sistemas de Telecomunicaciones (ESPE 2025)
 
 ## 📸 Screenshot
 
-![CyberCheck Screenshot](static/checker/images/CybergChcker.png)
+![Screenshot](checker/static/checker/images/screenshot.png)
 
 ---
 
